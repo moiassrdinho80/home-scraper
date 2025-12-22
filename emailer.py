@@ -71,6 +71,7 @@ def format_email_body(listings: List[Dict[str, str]]) -> str:
 def send_email(config: Config, listings: List[Dict[str, str]]) -> None:
     """
     Send email with listings via SMTP.
+    Supports multiple recipients (comma-separated).
     
     Args:
         config: Configuration instance
@@ -88,19 +89,26 @@ def send_email(config: Config, listings: List[Dict[str, str]]) -> None:
         subject = f"{config.EMAIL_SUBJECT_PREFIX}: New listings ({len(listings)})"
         body = format_email_body(listings)
         
+        # Parse recipients (support comma-separated list)
+        recipients = [email.strip() for email in config.EMAIL_TO.split(",") if email.strip()]
+        if not recipients:
+            raise EmailError("No valid email recipients found in EMAIL_TO")
+        
+        # Create message
         msg = MIMEText(body, "plain", "utf-8")
         msg["Subject"] = subject
         msg["From"] = config.EMAIL_FROM
-        msg["To"] = config.EMAIL_TO
+        msg["To"] = ", ".join(recipients)  # For display in email headers
         
         # Send via SMTP
         logger.info(f"Connecting to SMTP server {config.SMTP_HOST}:{config.SMTP_PORT}")
         with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=30) as server:
             server.starttls()
             server.login(config.SMTP_USER, config.SMTP_PASS)
-            server.send_message(msg)
+            # Send to all recipients
+            server.send_message(msg, to_addrs=recipients)
         
-        logger.info(f"Successfully sent email to {config.EMAIL_TO} with {len(listings)} listings")
+        logger.info(f"Successfully sent email to {len(recipients)} recipient(s): {', '.join(recipients)} with {len(listings)} listings")
         
     except smtplib.SMTPException as e:
         raise EmailError(f"SMTP error: {e}")
