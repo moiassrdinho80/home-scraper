@@ -132,6 +132,8 @@ EMAIL_TO=recipient@example.com
 
 **Windows Task Scheduler**:
 
+⚠️ **Note**: Task Scheduler requires your computer to be **on and awake**. If your computer is off or sleeping, scheduled tasks won't run.
+
 1. Open Task Scheduler
 2. Create Basic Task
 3. Set trigger: Daily, repeat every 12 hours
@@ -141,7 +143,36 @@ EMAIL_TO=recipient@example.com
    - Start in: `C:\Users\moias\OneDrive\Documents\Home_Notification`
 5. Set environment variables in the task's environment settings
 
-### Option B: Docker
+### Option B: GitHub Actions (Runs 24/7, No Computer Needed)
+
+GitHub Actions can run your script automatically every 12 hours, even when your computer is off. The database is stored as a GitHub artifact and automatically refreshed monthly to prevent expiration.
+
+**Setup Instructions:**
+
+1. **Push your code to GitHub** (see GitHub setup steps below)
+2. **Add secrets** in your GitHub repository:
+   - Go to your repo → Settings → Secrets and variables → Actions
+   - Click "New repository secret" and add:
+     - `SMTP_HOST` (e.g., `smtp.gmail.com`)
+     - `SMTP_PORT` (e.g., `587`)
+     - `SMTP_USER` (your email)
+     - `SMTP_PASS` (your app password)
+     - `EMAIL_FROM` (your email)
+     - `EMAIL_TO` (recipient email)
+     - `EMAIL_SUBJECT_PREFIX` (optional, default: `Fairfax FTHB`)
+     - `ALWAYS_EMAIL` (optional, default: `false`)
+3. **Enable workflows**: The workflows are already configured in `.github/workflows/`
+4. **Test manually**: Go to Actions tab → "Fairfax FTHB Notifier" → "Run workflow"
+
+**How it works:**
+- Main workflow runs every 12 hours (00:00 and 12:00 UTC)
+- Downloads previous `listings.db` artifact before running
+- Uploads updated database after running
+- Separate workflow refreshes artifacts monthly to prevent expiration
+
+**Note**: Free GitHub Actions are available for public repositories. Private repos require GitHub Pro/Team.
+
+### Option C: Docker
 
 See the Docker section below for containerized deployment.
 

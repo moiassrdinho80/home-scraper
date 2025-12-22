@@ -1,0 +1,42 @@
+name: Refresh Database Artifact
+
+on:
+  schedule:
+    # Run monthly on the 1st at 2 AM UTC to refresh artifacts before expiration
+    - cron: '0 2 1 * *'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Download current database artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: listings-db
+          path: .
+          if-no-artifact-found: continue
+        continue-on-error: true
+      
+      - name: Refresh artifact (re-upload to reset expiration)
+        uses: actions/upload-artifact@v3
+        with:
+          name: listings-db
+          path: listings.db
+          retention-days: 90
+          if-no-files-found: ignore
+
