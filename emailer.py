@@ -4,6 +4,8 @@ Email sending via SMTP.
 
 import logging
 import smtplib
+import uuid
+from datetime import datetime
 from email.mime.text import MIMEText
 from typing import List, Dict
 
@@ -91,6 +93,14 @@ def send_email(config: Config, listings: List[Dict[str, str]]) -> None:
             subject = f"{config.EMAIL_SUBJECT_PREFIX}: Daily Update"
             body = "AHLAN AHLAN!!! There are no new listings today Sadly:("
         
+        # Ensure body is not empty
+        if not body or not body.strip():
+            body = "AHLAN AHLAN!!! There are no new listings today Sadly:("
+            logger.warning("Email body was empty, using default message")
+        
+        # Log the body for debugging
+        logger.debug(f"Email body length: {len(body)}, preview: {body[:100]}")
+        
         # Parse recipients (support comma-separated list)
         recipients = [email.strip() for email in config.EMAIL_TO.split(",") if email.strip()]
         if not recipients:
@@ -101,6 +111,18 @@ def send_email(config: Config, listings: List[Dict[str, str]]) -> None:
         msg["Subject"] = subject
         msg["From"] = config.EMAIL_FROM
         msg["To"] = ", ".join(recipients)  # For display in email headers
+        
+        # Generate unique Message-ID to create new thread (not reply to previous)
+        # Format: <timestamp-uuid@domain>
+        domain = config.EMAIL_FROM.split("@")[-1] if "@" in config.EMAIL_FROM else "fairfax-fthb.local"
+        unique_id = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+        msg["Message-ID"] = f"<{unique_id}@{domain}>"
+        
+        # Remove In-Reply-To and References headers to prevent threading
+        if "In-Reply-To" in msg:
+            del msg["In-Reply-To"]
+        if "References" in msg:
+            del msg["References"]
         
         # Send via SMTP
         logger.info(f"Connecting to SMTP server {config.SMTP_HOST}:{config.SMTP_PORT}")
