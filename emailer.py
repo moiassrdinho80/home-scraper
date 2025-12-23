@@ -72,22 +72,24 @@ def send_email(config: Config, listings: List[Dict[str, str]]) -> None:
     """
     Send email with listings via SMTP.
     Supports multiple recipients (comma-separated).
+    Always sends an email, even if no listings (sends "no new listings" message).
     
     Args:
         config: Configuration instance
-        listings: List of listing dictionaries to include
+        listings: List of listing dictionaries to include (can be empty)
         
     Raises:
         EmailError: If email sending fails
     """
-    if not listings:
-        logger.warning("No listings to email")
-        return
     
     try:
         # Format email
-        subject = f"{config.EMAIL_SUBJECT_PREFIX}: New listings ({len(listings)})"
-        body = format_email_body(listings)
+        if listings:
+            subject = f"{config.EMAIL_SUBJECT_PREFIX}: New listings ({len(listings)})"
+            body = format_email_body(listings)
+        else:
+            subject = f"{config.EMAIL_SUBJECT_PREFIX}: Daily Update"
+            body = "There are no new listings today."
         
         # Parse recipients (support comma-separated list)
         recipients = [email.strip() for email in config.EMAIL_TO.split(",") if email.strip()]
@@ -108,7 +110,10 @@ def send_email(config: Config, listings: List[Dict[str, str]]) -> None:
             # Send to all recipients
             server.send_message(msg, to_addrs=recipients)
         
-        logger.info(f"Successfully sent email to {len(recipients)} recipient(s): {', '.join(recipients)} with {len(listings)} listings")
+        if listings:
+            logger.info(f"Successfully sent email to {len(recipients)} recipient(s): {', '.join(recipients)} with {len(listings)} listings")
+        else:
+            logger.info(f"Successfully sent email to {len(recipients)} recipient(s): {', '.join(recipients)} - No new listings today")
         
     except smtplib.SMTPException as e:
         raise EmailError(f"SMTP error: {e}")

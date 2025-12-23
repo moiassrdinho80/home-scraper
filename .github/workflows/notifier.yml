@@ -2,8 +2,9 @@ name: Fairfax FTHB Notifier
 
 on:
   schedule:
-    # Run every 12 hours at minute 0 (00:00 and 12:00 UTC)
-    - cron: '0 */12 * * *'
+    # Run daily at 4 PM EST (20:00 UTC during EDT, 21:00 UTC during EST)
+    # Using 20:00 UTC which is 4 PM EDT (most of the year)
+    - cron: '0 20 * * *'
   workflow_dispatch:  # Allow manual triggering
 
 jobs:

@@ -60,30 +60,33 @@ def run_once(config: Config, exclude_closed: bool = False, dry_run: bool = False
         metrics["new_unemailed"] = len(unemailed)
         logger.info(f"Found {len(unemailed)} new unemailed listings")
         
-        if not unemailed:
-            logger.info("No new listings to email")
-            if not config.ALWAYS_EMAIL:
-                return metrics
-        
-        # Format and display/send
+        # Always send email (even if no new listings)
         if dry_run:
-            logger.info("DRY RUN - Would send email with the following listings:")
+            logger.info("DRY RUN - Would send email:")
             print("\n" + "=" * 80)
-            print(format_email_body(unemailed))
+            if unemailed:
+                print(format_email_body(unemailed))
+            else:
+                print("There are no new listings today.")
             print("=" * 80 + "\n")
-            metrics["emailed_count"] = len(unemailed)
+            metrics["emailed_count"] = len(unemailed) if unemailed else 0
         else:
-            # Send email
+            # Send email (will include "no new listings" message if empty)
             try:
                 send_email(config, unemailed)
-                # Mark as emailed only after successful send
-                listing_ids = [listing["id"] for listing in unemailed]
-                store.mark_as_emailed(listing_ids)
-                metrics["emailed_count"] = len(unemailed)
-                logger.info(f"Successfully emailed {len(unemailed)} listings")
+                # Mark as emailed only after successful send and only if there are listings
+                if unemailed:
+                    listing_ids = [listing["id"] for listing in unemailed]
+                    store.mark_as_emailed(listing_ids)
+                    metrics["emailed_count"] = len(unemailed)
+                    logger.info(f"Successfully emailed {len(unemailed)} listings")
+                else:
+                    logger.info("Successfully sent email: No new listings today")
+                    metrics["emailed_count"] = 0
             except EmailError as e:
                 logger.error(f"Failed to send email: {e}")
-                logger.error("Listings were NOT marked as emailed - will retry on next run")
+                if unemailed:
+                    logger.error("Listings were NOT marked as emailed - will retry on next run")
                 raise
         
         # Log stats
