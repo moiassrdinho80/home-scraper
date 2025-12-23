@@ -89,7 +89,7 @@ def send_email(config: Config, listings: List[Dict[str, str]]) -> None:
             body = format_email_body(listings)
         else:
             subject = f"{config.EMAIL_SUBJECT_PREFIX}: Daily Update"
-            body = "There are no new listings today.\n\nThis is an automated daily update from the Fairfax FTHB Listings Notifier."
+            body = "AHLAN AHLAN!!! There are no new listings today Sadly:("
         
         # Parse recipients (support comma-separated list)
         recipients = [email.strip() for email in config.EMAIL_TO.split(",") if email.strip()]
