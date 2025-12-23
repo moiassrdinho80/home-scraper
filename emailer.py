@@ -141,16 +141,25 @@ def send_email(config: Config, listings: List[Dict[str, str]]) -> None:
         
         # Send via SMTP
         logger.info(f"Connecting to SMTP server {config.SMTP_HOST}:{config.SMTP_PORT}")
-        with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=30) as server:
-            server.starttls()
-            server.login(config.SMTP_USER, config.SMTP_PASS)
-            # Send to all recipients
-            server.send_message(msg, to_addrs=recipients)
+        try:
+            with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=30) as server:
+                logger.info("SMTP connection established")
+                server.starttls()
+                logger.info("TLS started")
+                server.login(config.SMTP_USER, config.SMTP_PASS)
+                logger.info("SMTP login successful")
+                # Send to all recipients
+                logger.info(f"Attempting to send email to {len(recipients)} recipient(s)...")
+                result = server.send_message(msg, to_addrs=recipients)
+                logger.info(f"SMTP send_message returned: {result}")
+        except Exception as smtp_error:
+            logger.error(f"SMTP send error details: {type(smtp_error).__name__}: {smtp_error}")
+            raise
         
         if listings:
-            logger.info(f"Successfully sent email to {len(recipients)} recipient(s): {', '.join(recipients)} with {len(listings)} listings")
+            logger.info(f"✅ Successfully sent email to {len(recipients)} recipient(s): {', '.join(recipients)} with {len(listings)} listings")
         else:
-            logger.info(f"Successfully sent email to {len(recipients)} recipient(s): {', '.join(recipients)} - No new listings today")
+            logger.info(f"✅ Successfully sent email to {len(recipients)} recipient(s): {', '.join(recipients)} - No new listings today")
         
     except smtplib.SMTPException as e:
         raise EmailError(f"SMTP error: {e}")
