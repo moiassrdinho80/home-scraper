@@ -6,7 +6,7 @@ import logging
 import smtplib
 import uuid
 from datetime import datetime
-from email.mime.text import MIMEText
+from email.message import EmailMessage
 from typing import List, Dict
 
 from config import Config
@@ -108,23 +108,36 @@ def send_email(config: Config, listings: List[Dict[str, str]]) -> None:
         if not recipients:
             raise EmailError("No valid email recipients found in EMAIL_TO")
         
-        # Create message
-        msg = MIMEText(body, "plain", "utf-8")
-        msg["Subject"] = subject
-        msg["From"] = config.EMAIL_FROM
-        msg["To"] = ", ".join(recipients)  # For display in email headers
-        
-        # Generate unique Message-ID to create new thread (not reply to previous)
-        # Format: <timestamp-uuid@domain>
+        # Generate unique Message-ID and add timestamp to subject to prevent threading
         domain = config.EMAIL_FROM.split("@")[-1] if "@" in config.EMAIL_FROM else "fairfax-fthb.local"
         unique_id = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+        
+        # Add date to subject to make each email unique (prevents threading)
+        date_str = datetime.utcnow().strftime("%Y-%m-%d")
+        if not listings:
+            # For daily updates, include the date in subject
+            subject = f"{config.EMAIL_SUBJECT_PREFIX}: Daily Update - {date_str}"
+        
+        # Create message using EmailMessage (more reliable than MIMEText)
+        msg = EmailMessage()
+        msg.set_content(body)
+        msg["Subject"] = subject
+        msg["From"] = config.EMAIL_FROM
+        msg["To"] = ", ".join(recipients)
         msg["Message-ID"] = f"<{unique_id}@{domain}>"
         
-        # Remove In-Reply-To and References headers to prevent threading
+        # Ensure these headers are not present to prevent threading
         if "In-Reply-To" in msg:
             del msg["In-Reply-To"]
         if "References" in msg:
             del msg["References"]
+        
+        # Log what we're about to send
+        logger.info(f"Prepared email message:")
+        logger.info(f"  Subject: {subject}")
+        logger.info(f"  Body length: {len(body)} chars")
+        logger.info(f"  Message-ID: {msg['Message-ID']}")
+        logger.info(f"  Recipients: {recipients}")
         
         # Send via SMTP
         logger.info(f"Connecting to SMTP server {config.SMTP_HOST}:{config.SMTP_PORT}")
