@@ -98,8 +98,10 @@ def send_email(config: Config, listings: List[Dict[str, str]]) -> None:
             body = "AHLAN AHLAN!!! There are no new listings today Sadly:("
             logger.warning("Email body was empty, using default message")
         
-        # Log the body for debugging
-        logger.debug(f"Email body length: {len(body)}, preview: {body[:100]}")
+        # Log the body for debugging (use INFO level so it shows in GitHub Actions)
+        logger.info(f"Email body length: {len(body)} characters")
+        logger.info(f"Email body preview (first 200 chars): {body[:200]}")
+        logger.info(f"Email body full content: {repr(body)}")
         
         # Parse recipients (support comma-separated list)
         recipients = [email.strip() for email in config.EMAIL_TO.split(",") if email.strip()]
