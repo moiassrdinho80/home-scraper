@@ -31,7 +31,6 @@ jobs:
         with:
           name: listings-db
           path: .
-          if-no-artifact-found: continue
         continue-on-error: true
       
       - name: Run notifier
