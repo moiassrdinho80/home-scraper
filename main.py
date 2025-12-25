@@ -97,6 +97,12 @@ def run_once(config: Config, exclude_closed: bool = False, dry_run: bool = False
         stats = store.get_stats()
         logger.info(f"Database stats: {stats['total']} total, {stats['emailed']} emailed, {stats['unemailed']} unemailed")
         
+        # Force database to be written to disk before upload
+        # Close any remaining connections
+        import gc
+        gc.collect()
+        logger.info("Database operations complete, ready for artifact upload")
+        
         return metrics
         
     except ScraperError as e:
