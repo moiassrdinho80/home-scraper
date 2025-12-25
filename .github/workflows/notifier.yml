@@ -46,13 +46,23 @@ jobs:
           DB_PATH: listings.db
         run: python main.py --once
       
+      - name: Verify database exists before upload
+        run: |
+          if [ -f listings.db ]; then
+            echo "Database file exists, size: $(ls -lh listings.db | awk '{print $5}')"
+            sqlite3 listings.db "SELECT COUNT(*) as total, COUNT(emailed_at) as emailed FROM listings;" || echo "Database query failed"
+          else
+            echo "ERROR: listings.db file not found!"
+            exit 1
+          fi
+      
       - name: Upload updated database artifact
         uses: actions/upload-artifact@v4
         with:
           name: listings-db
           path: listings.db
           retention-days: 90
-          if-no-files-found: ignore
+          if-no-files-found: error
 
 
 

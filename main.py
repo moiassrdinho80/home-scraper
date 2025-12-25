@@ -77,7 +77,11 @@ def run_once(config: Config, exclude_closed: bool = False, dry_run: bool = False
                 # Mark as emailed only after successful send and only if there are listings
                 if unemailed:
                     listing_ids = [listing["id"] for listing in unemailed]
+                    logger.info(f"Marking {len(listing_ids)} listings as emailed: {listing_ids[:3]}...")  # Log first 3 IDs
                     store.mark_as_emailed(listing_ids)
+                    # Verify the update was saved
+                    stats_after = store.get_stats()
+                    logger.info(f"After marking: {stats_after['emailed']} emailed, {stats_after['unemailed']} unemailed")
                     metrics["emailed_count"] = len(unemailed)
                     logger.info(f"Successfully emailed {len(unemailed)} listings")
                 else:

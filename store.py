@@ -203,22 +203,40 @@ class ListingStore:
             listing_ids: List of listing IDs to mark
         """
         if not listing_ids:
+            logger.warning("mark_as_emailed called with empty list")
             return
         
         now = datetime.utcnow()
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
+        # First, verify these IDs exist
         placeholders = ",".join("?" * len(listing_ids))
+        cursor.execute(f"""
+            SELECT id FROM listings WHERE id IN ({placeholders})
+        """, listing_ids)
+        existing_ids = [row[0] for row in cursor.fetchall()]
+        
+        if len(existing_ids) != len(listing_ids):
+            missing = set(listing_ids) - set(existing_ids)
+            logger.warning(f"Some listing IDs not found in database: {missing}")
+        
+        # Update the listings
         cursor.execute(f"""
             UPDATE listings
             SET emailed_at = ?
             WHERE id IN ({placeholders})
         """, (now, *listing_ids))
         
+        rows_updated = cursor.rowcount
         conn.commit()
         conn.close()
-        logger.info(f"Marked {len(listing_ids)} listings as emailed")
+        
+        logger.info(f"Marked {rows_updated} listings as emailed (requested {len(listing_ids)})")
+        
+        # Verify the update
+        if rows_updated != len(listing_ids):
+            logger.warning(f"Expected to update {len(listing_ids)} listings, but only {rows_updated} were updated")
     
     def get_stats(self) -> Dict[str, int]:
         """
