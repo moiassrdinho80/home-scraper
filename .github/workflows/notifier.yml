@@ -25,12 +25,40 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
+      - name: Get previous workflow run
+        id: previous-run
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: context.workflow,
+              per_page: 2
+            });
+            
+            // Get the most recent completed run (skip current run)
+            const previousRun = runs.workflow_runs.find(run => 
+              run.id !== context.runId && run.status === 'completed' && run.conclusion === 'success'
+            );
+            
+            if (previousRun) {
+              core.setOutput('run_id', previousRun.id);
+              console.log(`Found previous successful run: ${previousRun.id}`);
+            } else {
+              console.log('No previous successful run found');
+            }
+        continue-on-error: true
+      
       - name: Download previous database artifact
         id: download-db
+        if: steps.previous-run.outputs.run_id != ''
         uses: actions/download-artifact@v4
         with:
           name: listings-db
           path: .
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ steps.previous-run.outputs.run_id }}
         continue-on-error: true
       
       - name: Check database state before run
