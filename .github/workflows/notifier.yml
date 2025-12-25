@@ -30,23 +30,30 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const { data: runs } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: context.workflow,
-              per_page: 2
-            });
-            
-            // Get the most recent completed run (skip current run)
-            const previousRun = runs.workflow_runs.find(run => 
-              run.id !== context.runId && run.status === 'completed' && run.conclusion === 'success'
-            );
-            
-            if (previousRun) {
-              core.setOutput('run_id', previousRun.id);
-              console.log(`Found previous successful run: ${previousRun.id}`);
-            } else {
-              console.log('No previous successful run found');
+            try {
+              const { data: runs } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: '.github/workflows/notifier.yml',
+                per_page: 5,
+                status: 'completed'
+              });
+              
+              // Get the most recent completed successful run (skip current run)
+              const previousRun = runs.workflow_runs.find(run => 
+                run.id != context.runId && run.conclusion === 'success'
+              );
+              
+              if (previousRun) {
+                core.setOutput('run_id', previousRun.id.toString());
+                console.log(`Found previous successful run: ${previousRun.id}`);
+              } else {
+                console.log('No previous successful run found - this might be the first run');
+                core.setOutput('run_id', '');
+              }
+            } catch (error) {
+              console.log(`Error finding previous run: ${error.message}`);
+              core.setOutput('run_id', '');
             }
         continue-on-error: true
       
