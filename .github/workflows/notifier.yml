@@ -33,6 +33,16 @@ jobs:
           path: .
         continue-on-error: true
       
+      - name: Check database state before run
+        run: |
+          if [ -f listings.db ]; then
+            echo "✅ Database file exists"
+            echo "Database stats:"
+            sqlite3 listings.db "SELECT COUNT(*) as total, COUNT(emailed_at) as emailed, COUNT(*) - COUNT(emailed_at) as unemailed FROM listings;" || echo "Note: Database might be empty or new"
+          else
+            echo "⚠️ No existing database found - will create new one"
+          fi
+      
       - name: Run notifier
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
