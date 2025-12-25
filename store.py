@@ -102,7 +102,7 @@ class ListingStore:
         exists = cursor.fetchone() is not None
         
         if exists:
-            # Update existing listing
+            # Update existing listing (but preserve emailed_at if it exists)
             cursor.execute("""
                 UPDATE listings
                 SET title = ?,
@@ -123,6 +123,7 @@ class ListingStore:
                 now,
                 listing_id
             ))
+            # Note: emailed_at is NOT updated here - it's preserved if it exists
         else:
             # Insert new listing
             cursor.execute("""
